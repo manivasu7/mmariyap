@@ -1,29 +1,72 @@
+buildscript {
+    ext {
+        lombokVersion = '1.18.34'
+    }
+}
+
 plugins {
     id 'java'
+    id "idea"
 }
 
 java {
-    sourceCompatibility = JavaVersion.VERSION_17
-    targetCompatibility = JavaVersion.VERSION_17
+    sourceCompatibility = '21'
 }
-
-
-group 'com.example'
-version '1.0-SNAPSHOT'
 
 repositories {
     mavenCentral()
+    mavenLocal()
 }
 
 dependencies {
-    
+    implementation 'org.springframework:spring-jdbc:6.1.10',
+            'org.mongodb:mongodb-driver-sync:5.1.2',
+            'org.antlr:ST4:4.3.4',
+            "org.projectlombok:lombok:${lombokVersion}"
+
     testImplementation 'com.intuit.karate:karate-junit5:1.4.1',
             "com.intuit.karate:karate-netty:0.9.2",
             "com.intuit.karate:karate-apache:0.9.6",
             "net.masterthought:cucumber-reporting:5.8.1",
             'junit:junit:4.13.2'
+
+    annotationProcessor "org.projectlombok:lombok:${lombokVersion}"
+    testAnnotationProcessor "org.projectlombok:lombok:${lombokVersion}"
+}
+
+compileJava.dependsOn(clean)
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+}
+
+tasks.register('karateDebug', JavaExec) {
+    classpath = sourceSets.test.runtimeClasspath
+    main = 'com.intuit.karate.cli.Main'
+}
+
+sourceSets {
+    test {
+        java {
+            srcDir file('src/test/java')
+            exclude '**/*UiRunner*.java'
+        }
+        resources {
+            srcDir file('src/test/java')
+            exclude '**/*.java'
+        }
+    }
 }
 
 test {
-    useJUnitPlatform()
+    systemProperties System.getProperties()
+    systemProperty "file.encoding", "utf-8"
+    // pull karate options into the runtime
+    systemProperty "karate.options", System.properties.getProperty("karate.options")
+    // pull karate env into the runtime
+    systemProperty "karate.env", System.properties.getProperty("karate.env")
+    // ensure tests are always run
+    outputs.upToDateWhen { false }
 }
+
+gradle.startParameter.continueOnFailure = true
